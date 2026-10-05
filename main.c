@@ -128,6 +128,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
       takeScreenshot();
       ShowWindow(hwnd, SW_SHOWMAXIMIZED);
       SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+      SetForegroundWindow(hwnd);
       isActive = 1;
       return 0;
     }
