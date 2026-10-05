@@ -1,5 +1,7 @@
 # screenshot
 
+![Preview image of the screenshot application](./img/example.png)
+
 A screenshot application for Windows
 
 `Alt+Shift+P` - To open the screenshot window
