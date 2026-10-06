@@ -289,7 +289,7 @@ int WINAPI WinMain(
   width = GetSystemMetrics(SM_CXVIRTUALSCREEN) - x;
   height = GetSystemMetrics(SM_CYVIRTUALSCREEN) - y;
 
-  if (!RegisterHotKey(hwnd, HOTKEY_ID, MOD_WIN | MOD_SHIFT, 'S')) {
+  if (!RegisterHotKey(hwnd, HOTKEY_ID, MOD_ALT | MOD_SHIFT, 'P')) {
     displayError();
     return 1;
   }
