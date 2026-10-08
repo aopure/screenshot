@@ -1,12 +1,15 @@
 #include <windows.h>
-
 #include <stdio.h>
 
 #define ALPHA 170
 #define HOTKEY_ID 1
+#define WM_TRAYICON (WM_USER + 1)
+#define IDM_APP_EXIT 123
 
 HDC hdc;
 HDC darkHdc;
+
+HMENU contextMenu;
 
 char isActive = 0;
 
@@ -108,6 +111,30 @@ void copyScreenshot(int x, int y, int cx, int cy) {
 
 }
 
+void addTrayIcon(HWND hwnd) {
+  NOTIFYICONDATAW ni = { 0 };
+  ni.cbSize = sizeof(NOTIFYICONDATAW);
+  ni.hWnd = hwnd;
+  ni.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+  ni.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+  ni.uCallbackMessage = WM_TRAYICON;
+  ni.uID = 1;
+  wchar_t *title = L"Hello, World";
+  
+  wcsncpy(ni.szTip, title, 127);
+  ni.szTip[127] = L'\0';
+
+  Shell_NotifyIconW(NIM_ADD, &ni);
+}
+
+HMENU createPopup() {
+  HMENU popup = CreatePopupMenu();
+
+  AppendMenuW(popup, MF_STRING, IDM_APP_EXIT, L"Exit");
+
+  return popup;
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
   switch (uMsg) {
@@ -131,6 +158,31 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
       SetForegroundWindow(hwnd);
       isActive = 1;
       return 0;
+    }
+
+    case WM_TRAYICON: {
+      if (lParam == WM_RBUTTONUP) {
+        POINT pt;
+        GetCursorPos(&pt);
+
+        SetForegroundWindow(hwnd);
+
+        TrackPopupMenu(
+          contextMenu, 
+          TPM_CENTERALIGN | 
+          TPM_BOTTOMALIGN, 
+          pt.x, 
+          pt.y, 
+          0, 
+          hwnd, 
+          NULL);
+      }
+    }
+
+    case WM_COMMAND: {
+      if (LOWORD(wParam) == IDM_APP_EXIT) {
+        DestroyWindow(hwnd);
+      }
     }
 
     case WM_KEYDOWN: {
@@ -290,6 +342,14 @@ int WINAPI WinMain(
   height = GetSystemMetrics(SM_CYVIRTUALSCREEN) - y;
 
   if (!RegisterHotKey(hwnd, HOTKEY_ID, MOD_ALT | MOD_SHIFT, 'P')) {
+    displayError();
+    return 1;
+  }
+
+  addTrayIcon(hwnd);
+  contextMenu = createPopup();
+
+  if (contextMenu == NULL) {
     displayError();
     return 1;
   }
