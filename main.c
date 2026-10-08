@@ -5,17 +5,19 @@
 #define HOTKEY_ID 1
 #define WM_TRAYICON (WM_USER + 1)
 #define IDM_APP_EXIT 123
+#define IDM_APP_QUICKSCREENSHOT 124
 
 HDC hdc;
 HDC darkHdc;
 
 HMENU contextMenu;
 
-char isActive = 0;
-
 RECT selection = {0};
 
 char isDown = 0;
+char isActive = 0;
+
+char quick = 1;
 
 int x, y, width, height;
 
@@ -111,6 +113,17 @@ void copyScreenshot(int x, int y, int cx, int cy) {
 
 }
 
+void copySelection(HWND hwnd) {
+  int x = selection.left;
+  int y = selection.top;
+  int cx = selection.right;
+  int cy = selection.bottom;
+  copyScreenshot(x, y, cx, cy);
+  SetRectEmpty(&selection);
+  ShowWindow(hwnd, SW_HIDE);
+  isActive = 0;
+}
+
 void addTrayIcon(HWND hwnd) {
   NOTIFYICONDATAW ni = { 0 };
   ni.cbSize = sizeof(NOTIFYICONDATAW);
@@ -130,6 +143,7 @@ void addTrayIcon(HWND hwnd) {
 HMENU createPopup() {
   HMENU popup = CreatePopupMenu();
 
+  AppendMenuW(popup, MF_STRING | MF_CHECKED, IDM_APP_QUICKSCREENSHOT, L"Quick screenshot");
   AppendMenuW(popup, MF_STRING, IDM_APP_EXIT, L"Exit");
 
   return popup;
@@ -170,7 +184,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         TrackPopupMenu(
           contextMenu, 
           TPM_CENTERALIGN | 
-          TPM_BOTTOMALIGN, 
+          TPM_BOTTOMALIGN |
+          TPM_NOANIMATION, 
           pt.x, 
           pt.y, 
           0, 
@@ -182,6 +197,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     case WM_COMMAND: {
       if (LOWORD(wParam) == IDM_APP_EXIT) {
         DestroyWindow(hwnd);
+      } else if (LOWORD(wParam) == IDM_APP_QUICKSCREENSHOT) {
+        MENUITEMINFOW iteminfo = { 0 };
+        iteminfo.cbSize = sizeof(MENUITEMINFOW);
+        iteminfo.fMask = MIIM_STATE;
+
+        GetMenuItemInfoW(contextMenu, IDM_APP_QUICKSCREENSHOT, FALSE, &iteminfo);
+
+        char checked = (iteminfo.fState & MFS_CHECKED) != 0;
+
+        CheckMenuItem(
+          contextMenu, 
+          IDM_APP_QUICKSCREENSHOT,
+          MF_BYCOMMAND | (checked ? MF_UNCHECKED : MF_CHECKED)
+        );
+
+        quick = !checked;
       }
     }
 
@@ -196,14 +227,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
         case 'C': {
           if(GetKeyState(VK_CONTROL) >> 15) {
-            int x = selection.left;
-            int y = selection.top;
-            int cx = selection.right;
-            int cy = selection.bottom;
-            copyScreenshot(x, y, cx, cy);
-            SetRectEmpty(&selection);
-            ShowWindow(hwnd, SW_HIDE);
-            isActive = 0;
+            copySelection(hwnd);
             return 0;
           };
         }
@@ -222,6 +246,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
     case WM_LBUTTONUP: {
       isDown = 0;
+      if (quick) {
+        copySelection(hwnd);
+      }
     }
 
     case WM_MOUSEMOVE: {
