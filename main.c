@@ -6,6 +6,7 @@
 #define WM_TRAYICON (WM_USER + 1)
 #define IDM_APP_EXIT 123
 #define IDM_APP_QUICKSCREENSHOT 124
+#define IDM_APP_COPYFULLSCREEN 125
 
 HDC hdc;
 HDC darkHdc;
@@ -124,6 +125,13 @@ void copySelection(HWND hwnd) {
   isActive = 0;
 }
 
+void copyFullscreen(HWND hwnd) {
+  takeScreenshot();
+  copyScreenshot(x, y, width, height);
+  ShowWindow(hwnd, SW_HIDE);
+  isActive = 0;
+}
+
 void addTrayIcon(HWND hwnd) {
   NOTIFYICONDATAW ni = { 0 };
   ni.cbSize = sizeof(NOTIFYICONDATAW);
@@ -144,6 +152,7 @@ HMENU createPopup() {
   HMENU popup = CreatePopupMenu();
 
   AppendMenuW(popup, MF_STRING | MF_CHECKED, IDM_APP_QUICKSCREENSHOT, L"Quick screenshot");
+  AppendMenuW(popup, MF_STRING, IDM_APP_COPYFULLSCREEN, L"Copy fullscreen");
   AppendMenuW(popup, MF_STRING, IDM_APP_EXIT, L"Exit");
 
   return popup;
@@ -213,6 +222,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         );
 
         quick = !checked;
+      } else if (LOWORD(wParam) == IDM_APP_COPYFULLSCREEN) {
+        copyFullscreen(hwnd);
       }
     }
 
