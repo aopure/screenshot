@@ -140,7 +140,7 @@ void addTrayIcon(HWND hwnd) {
   ni.hIcon = LoadIcon(NULL, IDI_APPLICATION);
   ni.uCallbackMessage = WM_TRAYICON;
   ni.uID = 1;
-  wchar_t *title = L"Hello, World";
+  wchar_t *title = L"Screenshot";
   
   wcsncpy(ni.szTip, title, 127);
   ni.szTip[127] = L'\0';
