@@ -1,5 +1,9 @@
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 #define ALPHA 170
 #define HOTKEY_ID 1
@@ -10,6 +14,7 @@
 
 HDC hdc;
 HDC darkHdc;
+HBITMAP screenHBitmap;
 
 HMENU contextMenu;
 
@@ -21,6 +26,65 @@ char isActive = 0;
 char quick = 1;
 
 int x, y, width, height;
+
+void createFilename(char *buffer, int bufferSize, SYSTEMTIME timestamp) {
+  WORD hour = timestamp.wHour;
+  WORD minute = timestamp.wMinute;
+  WORD second = timestamp.wSecond;
+  WORD day = timestamp.wDay;
+  WORD month = timestamp.wMonth;
+  WORD year = timestamp.wYear;
+
+  snprintf(
+    buffer, 
+    bufferSize, 
+    "screenshot_%02d-%02d-%02d_%02d%02d%02d.png", 
+    year, month, day, hour, minute, second
+  );
+  
+}
+
+void saveHBitmapToPng(HBITMAP hBitmap) {
+  if (!hBitmap) return;
+
+  char filename[64];
+  SYSTEMTIME lt;
+  GetLocalTime(&lt);
+  createFilename(filename, 64, lt);
+
+  BITMAP bm;
+  if (!GetObjectW(hBitmap, sizeof(BITMAP), &bm));
+
+  int width = bm.bmWidth;
+  int height = bm.bmHeight;
+  int channels = 4;
+
+  BITMAPINFOHEADER bi = { 0 };
+  bi.biSize = sizeof(BITMAPINFOHEADER);
+  bi.biWidth = width;
+  bi.biHeight = -height;
+  bi.biPlanes = 1;
+  bi.biBitCount = 32;
+  bi.biCompression = BI_RGB;
+
+  unsigned char *buffer = malloc(width * height * channels);
+
+  HDC hdc = GetDC(NULL);
+  int result = GetDIBits(hdc, hBitmap, 0, height, buffer, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+  ReleaseDC(NULL, hdc);
+
+  if (result == 0) return;
+
+  for (int i = 0; i < width * height * channels; i += channels) {
+    unsigned char blue = buffer[i];
+    buffer[i] = buffer[i + 2];
+    buffer[i + 2] = blue;
+  }
+
+  int stride_bytes = width * channels;
+  stbi_write_png(filename, width, height, channels, buffer, stride_bytes);
+  
+}
 
 void displayError() {
   wchar_t *buffer;
@@ -77,6 +141,8 @@ void takeScreenshot() {
   BitBlt(hdc, 0, 0, width, height, dcScreen, 0, 0, SRCCOPY);
   BitBlt(darkHdc, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 
+  screenHBitmap = map;
+
   darkenDC(darkHdc, hdc, ALPHA);
 
   DeleteObject(oldMap);
@@ -125,9 +191,44 @@ void copySelection(HWND hwnd) {
   isActive = 0;
 }
 
+void saveScreenshot(int x, int y, int cx, int cy) {
+  int w = abs(cx - x);
+  int h = abs(cy - y);
+  
+  HDC dc = CreateCompatibleDC(hdc);
+  HBITMAP map = CreateCompatibleBitmap(hdc, w, h);
+  HBITMAP oldMap = SelectObject(dc, map);
+
+  BitBlt(dc, 0, 0, w, h, hdc, x, y, SRCCOPY);
+  saveHBitmapToPng(map);
+
+  SelectObject(dc, oldMap);
+  DeleteDC(dc);
+  DeleteObject(map);
+
+}
+
+void saveSelection(HWND hwnd) {
+  int x = selection.left;
+  int y = selection.top;
+  int cx = selection.right;
+  int cy = selection.bottom;
+  saveScreenshot(x, y, cx, cy);
+  SetRectEmpty(&selection);
+  ShowWindow(hwnd, SW_HIDE);
+  isActive = 0;
+}
+
 void copyFullscreen(HWND hwnd) {
   takeScreenshot();
   copyScreenshot(x, y, width, height);
+  ShowWindow(hwnd, SW_HIDE);
+  isActive = 0;
+}
+
+void saveFullscreen(HWND hwnd) {
+  takeScreenshot();
+  saveHBitmapToPng(screenHBitmap);
   ShowWindow(hwnd, SW_HIDE);
   isActive = 0;
 }
@@ -239,6 +340,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         case 'C': {
           if(GetKeyState(VK_CONTROL) >> 15) {
             copySelection(hwnd);
+            return 0;
+          };
+        }
+
+        case 'S': {
+          if(GetKeyState(VK_CONTROL) >> 15) {
+            saveSelection(hwnd);
             return 0;
           };
         }
