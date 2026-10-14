@@ -1,6 +1,10 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <shlobj.h>
+#include <stdio.h>
+#include <initguid.h> 
+#include <knownfolders.h> 
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -27,6 +31,37 @@ char quick = 1;
 
 int x, y, width, height;
 
+char* wstrToStr(wchar_t *wstr) {
+  if (!wstr) return NULL;
+
+  size_t size = wcstombs(NULL, wstr, 0) + 1;
+  if (size == (size_t)-1) return NULL;
+  char *str = (char*)malloc(size);
+  if (!str) return NULL;
+
+  size_t count = 0;
+  errno_t result = wcstombs_s(&count, str, size, wstr, size-1);
+  if (result != 0) {
+    free(str);
+  }
+
+  return str;
+}
+
+char* getPicturesFolder() {
+  PWSTR wstr = NULL; 
+    
+  HRESULT result = SHGetKnownFolderPath(&FOLDERID_Pictures, 0, NULL, &wstr);
+  
+  char *picturesPath;
+  if (result == S_OK) {
+    picturesPath = wstrToStr(wstr);
+    CoTaskMemFree(wstr); 
+  } 
+  
+  return picturesPath;
+}
+
 void createFilename(char *buffer, int bufferSize, SYSTEMTIME timestamp) {
   WORD hour = timestamp.wHour;
   WORD minute = timestamp.wMinute;
@@ -35,11 +70,13 @@ void createFilename(char *buffer, int bufferSize, SYSTEMTIME timestamp) {
   WORD month = timestamp.wMonth;
   WORD year = timestamp.wYear;
 
+  char *path = getPicturesFolder();
+
   snprintf(
     buffer, 
     bufferSize, 
-    "screenshot_%02d-%02d-%02d_%02d%02d%02d.png", 
-    year, month, day, hour, minute, second
+    "%s\\Screenshots\\screenshot_%02d-%02d-%02d_%02d%02d%02d.png", 
+    path, year, month, day, hour, minute, second
   );
   
 }
@@ -47,10 +84,10 @@ void createFilename(char *buffer, int bufferSize, SYSTEMTIME timestamp) {
 void saveHBitmapToPng(HBITMAP hBitmap) {
   if (!hBitmap) return;
 
-  char filename[64];
+  char filename[128];
   SYSTEMTIME lt;
   GetLocalTime(&lt);
-  createFilename(filename, 64, lt);
+  createFilename(filename, 128, lt);
 
   BITMAP bm;
   if (!GetObjectW(hBitmap, sizeof(BITMAP), &bm));
