@@ -7,7 +7,7 @@ A screenshot application for Windows
 `Alt+Shift+P` - To open the screenshot window
 
 `Ctrl+C` - To copy the screenshot to the clipboard  
-`Ctrl+S` - To save the screenshot (In the user's Pictures folder)
+`Ctrl+S` - To save the screenshot (In the user's \Pictures\Screenshots folder)
 
 Quick screenshot is turned on by default, to turn it off, uncheck it in tray menu
 
