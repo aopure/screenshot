@@ -15,10 +15,13 @@
 #define IDM_APP_EXIT 123
 #define IDM_APP_QUICKSCREENSHOT 124
 #define IDM_APP_COPYFULLSCREEN 125
+#define IDM_APP_CAPTURECURSOR 126
 
 HDC hdc;
 HDC darkHdc;
 HBITMAP screenHBitmap;
+HCURSOR hCursor;
+POINT cursorPos;
 
 HMENU contextMenu;
 
@@ -28,6 +31,7 @@ char isDown = 0;
 char isActive = 0;
 
 char quick = 1;
+char captureCursor = 0;
 
 int x, y, width, height;
 
@@ -169,6 +173,13 @@ void takeScreenshot() {
   HDC dcScreen = GetDC(NULL);
   hdc = CreateCompatibleDC(dcScreen);
   darkHdc = CreateCompatibleDC(dcScreen);
+  if (captureCursor) {
+    CURSORINFO ci;
+    ci.cbSize = sizeof(CURSORINFO);
+    GetCursorInfo(&ci);
+    hCursor = ci.hCursor;
+    cursorPos = ci.ptScreenPos;
+  }
 
   HBITMAP map = CreateCompatibleBitmap(dcScreen, width, height);
   HBITMAP oldMap = SelectObject(hdc, map);
@@ -176,6 +187,9 @@ void takeScreenshot() {
   HBITMAP oldDarkMap = SelectObject(darkHdc, darkMap);
 
   BitBlt(hdc, 0, 0, width, height, dcScreen, 0, 0, SRCCOPY);
+  if (captureCursor) {
+    DrawIcon(hdc, cursorPos.x, cursorPos.y, hCursor);
+  }
   BitBlt(darkHdc, 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 
   screenHBitmap = map;
@@ -290,6 +304,7 @@ HMENU createPopup() {
   HMENU popup = CreatePopupMenu();
 
   AppendMenuW(popup, MF_STRING | MF_CHECKED, IDM_APP_QUICKSCREENSHOT, L"Quick screenshot");
+  AppendMenuW(popup, MF_STRING | MF_UNCHECKED, IDM_APP_CAPTURECURSOR, L"Capture cursor");
   AppendMenuW(popup, MF_STRING, IDM_APP_COPYFULLSCREEN, L"Copy fullscreen");
   AppendMenuW(popup, MF_STRING, IDM_APP_EXIT, L"Exit");
 
@@ -360,6 +375,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         );
 
         quick = !checked;
+      } else if (LOWORD(wParam) == IDM_APP_CAPTURECURSOR) {
+        MENUITEMINFOW iteminfo = { 0 };
+        iteminfo.cbSize = sizeof(MENUITEMINFOW);
+        iteminfo.fMask = MIIM_STATE;
+
+        GetMenuItemInfoW(contextMenu, IDM_APP_CAPTURECURSOR, FALSE, &iteminfo);
+
+        char checked = (iteminfo.fState & MFS_CHECKED) != 0;
+
+        CheckMenuItem(
+          contextMenu, 
+          IDM_APP_CAPTURECURSOR,
+          MF_BYCOMMAND | (checked ? MF_UNCHECKED : MF_CHECKED)
+        );
+
+        captureCursor = !checked;
       } else if (LOWORD(wParam) == IDM_APP_COPYFULLSCREEN) {
         copyFullscreen(hwnd);
       }
