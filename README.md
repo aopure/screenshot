@@ -9,11 +9,12 @@ A screenshot application for Windows
 `Ctrl+C` - To copy the screenshot to the clipboard  
 `Ctrl+S` - To save the screenshot (In the user's \Pictures\Screenshots folder)
 
-Quick screenshot is turned on by default, to turn it off, uncheck it in tray menu
+Quick screenshot is turned on by default, to turn it off, uncheck it in the system tray menu  
+Capturing cursor is turned off by default, to turn it on, check it in the system tray menu
 
 # TODO
 
 1. Resizing the selected area
 2. Ability to change hotkey without changing code and recompiling the program
-3. Option to capture the cursor
-4. Option what quick screenshot should do (save, copy or both)
+3. Option what quick screenshot should do (save, copy or both)
+4. Add a settings window, instead of changing settings in the system tray menu
