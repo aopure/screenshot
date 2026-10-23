@@ -26,6 +26,8 @@ POINT cursorPos;
 HMENU contextMenu;
 
 RECT selection = {0};
+char selecting = 0;
+POINT selectionStart;
 
 char isDown = 0;
 char isActive = 0;
@@ -311,7 +313,12 @@ HMENU createPopup() {
   return popup;
 }
 
+static double movX = 0.0;
+static double movY = 0.0;
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+
+  static ULONGLONG lastTime = 0;
 
   switch (uMsg) {
 
@@ -320,7 +327,60 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
       return 0;
     }
 
+    case WM_CREATE: {
+      SetTimer(hwnd, 1, 16, NULL); // 60fps
+      lastTime = GetTickCount64();
+      return 0;
+    }
+
+    case WM_TIMER: {
+      if (!isActive) return 0;
+      ULONGLONG now = GetTickCount64();
+      double dt = (now - lastTime) / 1000.0;
+      lastTime = now;
+
+      int left  = GetAsyncKeyState(VK_LEFT)  & 0x8000 ? 1 : 0;
+      int right = GetAsyncKeyState(VK_RIGHT) & 0x8000 ? 1 : 0;
+      int up    = GetAsyncKeyState(VK_UP)    & 0x8000 ? 1 : 0;
+      int down  = GetAsyncKeyState(VK_DOWN)  & 0x8000 ? 1 : 0;
+
+      double speed = 300.0;
+      int dx = right - left;
+      int dy = down - up;
+
+      movX += (speed * dx * dt);
+      movY += (speed * dy * dt);
+
+      int moveX = (int)movX;
+      int moveY = (int)movY;
+
+      movX -= moveX;
+      movY -= moveY;
+
+      if (moveX != 0 || moveY != 0) {
+        POINT pt;
+        GetCursorPos(&pt);
+        SetCursorPos(pt.x + moveX, pt.y + moveY);
+
+        if (selecting) {
+          selection.left = selectionStart.x;
+          selection.top = selectionStart.y;
+          selection.right = pt.x + moveX;
+          selection.bottom = pt.y + moveY;
+          
+          RedrawWindow(
+            hwnd, 
+            NULL, NULL, 
+            RDW_INVALIDATE | RDW_UPDATENOW | RDW_NOERASE
+          );
+        }
+      }
+
+      return 0;
+    }
+
     case WM_DESTROY: {
+      KillTimer(hwnd, 1);
       PostQuitMessage(0);
       return 0;
     }
@@ -410,6 +470,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             copySelection(hwnd);
             return 0;
           };
+          break;
         }
 
         case 'S': {
@@ -417,6 +478,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             saveSelection(hwnd);
             return 0;
           };
+          break;
+        }
+
+        case VK_SPACE: {
+          selecting = !selecting;
+          if (selecting) {
+            GetCursorPos(&selectionStart);
+          } else {
+            SetRectEmpty(&selection);
+            RedrawWindow(
+              hwnd, 
+              NULL, NULL, 
+              RDW_INVALIDATE | RDW_UPDATENOW | RDW_NOERASE
+            );
+          }
+          break;
         }
       }
 
