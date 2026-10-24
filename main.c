@@ -238,7 +238,8 @@ void copySelection(HWND hwnd) {
   int y = selection.top;
   int cx = selection.right;
   int cy = selection.bottom;
-  copyScreenshot(x, y, cx, cy);
+   
+  copyScreenshot(min(x, cx), min(y, cy), max(x, cx), max(y, cy));
   SetRectEmpty(&selection);
   ShowWindow(hwnd, SW_HIDE);
   isActive = 0;
@@ -266,7 +267,7 @@ void saveSelection(HWND hwnd) {
   int y = selection.top;
   int cx = selection.right;
   int cy = selection.bottom;
-  saveScreenshot(x, y, cx, cy);
+  saveScreenshot(min(x, cx), min(y, cy), max(x, cx), max(y, cy));
   SetRectEmpty(&selection);
   ShowWindow(hwnd, SW_HIDE);
   isActive = 0;
@@ -367,7 +368,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
           selection.top = selectionStart.y;
           selection.right = pt.x + moveX;
           selection.bottom = pt.y + moveY;
-          
+
           RedrawWindow(
             hwnd, 
             NULL, NULL, 
@@ -393,6 +394,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
       SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
       SetForegroundWindow(hwnd);
       isActive = 1;
+      selecting = 0;
       return 0;
     }
 
@@ -462,6 +464,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
           SetRectEmpty(&selection);
           ShowWindow(hwnd, SW_HIDE);
           isActive = 0;
+          selecting = 0;
           return 0;
         }
 
