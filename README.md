@@ -12,6 +12,9 @@ A screenshot application for Windows
 Quick screenshot is turned on by default, to turn it off, uncheck it in the system tray menu  
 Capturing cursor is turned off by default, to turn it on, check it in the system tray menu
 
+To select with your keyboard, press `Space` to start selection at the point of the cursor  
+Use arrows to resize the selection
+
 # TODO
 
 1. Resizing the selected area
